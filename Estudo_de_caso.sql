@@ -100,88 +100,83 @@ create table tbl_compra_produto (
     references tbl_produto (id)
 );
 
--- Definir um delimitador para agrupar comandos no trigger
-DELIMITER $$
+-- definir um delimitador para agrupar comandos no trigger
+delimiter $$
 
--- Trigger que reduz o estoque após uma venda
-CREATE TRIGGER trg_update_estoque
-AFTER INSERT ON tbl_compra_produto -- O trigger será ativado após uma inserção em tbl_compra_produto
-FOR EACH ROW -- Executa a ação para cada nova linha inserida
-BEGIN
-    -- Atualiza o estoque subtraindo a quantidade vendida
-    UPDATE tbl_produto
-    SET estoque = estoque - NEW.quantidade
-    WHERE id = NEW.id_produto;
-END $$
+-- trigger que reduz o estoque após uma venda
+create trigger trg_update_estoque
+after insert on tbl_compra_produto -- o trigger será ativado após uma inserção em tbl_compra_produto
+for each row -- executa a ação para cada nova linha inserida
+begin
+    -- atualiza o estoque subtraindo a quantidade vendida
+    update tbl_produto
+    set estoque = estoque - new.quantidade
+    where id = new.id_produto;
+end $$
 
--- Resetar o delimitador padrão
-DELIMITER ;
+-- resetar o delimitador padrão
+delimiter ;
 
--- Definir um novo delimitador para agrupar o próximo trigger
-DELIMITER $$
+-- definir um novo delimitador para agrupar o próximo trigger
+delimiter $$
 
--- Trigger que impede venda se não houver estoque suficiente
-CREATE TRIGGER trg_verifica_estoque
-BEFORE INSERT ON tbl_compra_produto -- O trigger será ativado antes de uma inserção em tbl_compra_produto
-FOR EACH ROW -- Executa a ação para cada nova linha inserida
-BEGIN
-    DECLARE estoque_atual INT; -- Declara uma variável para armazenar o estoque atual
+-- trigger que impede venda se não houver estoque suficiente
+create trigger trg_verifica_estoque
+before insert on tbl_compra_produto -- o trigger será ativado antes de uma inserção em tbl_compra_produto
+for each row -- executa a ação para cada nova linha inserida
+begin
+    declare estoque_atual int; -- declara uma variável para armazenar o estoque atual
 
-    -- Obtém o estoque do produto antes da venda
-    SELECT estoque INTO estoque_atual FROM tbl_produto WHERE id = NEW.id_produto;
+    -- obtém o estoque do produto antes da venda
+    select estoque into estoque_atual from tbl_produto where id = new.id_produto;
 
-    -- Se o estoque for menor que a quantidade desejada, bloqueia a inserção
-    IF estoque_atual < NEW.quantidade THEN
-        SIGNAL SQLSTATE '45000' -- Gera um erro personalizado
-        SET MESSAGE_TEXT = 'Erro: Estoque insuficiente para esta venda!';
-    END IF;
-END $$
+    -- se o estoque for menor que a quantidade desejada, bloqueia a inserção
+    if estoque_atual < new.quantidade then
+        signal sqlstate '45000' -- gera um erro personalizado
+        set message_text = 'erro: estoque insuficiente para esta venda!';
+    end if;
+end $$
 
--- Resetar o delimitador padrão
-DELIMITER ;
+-- resetar o delimitador padrão
+delimiter ;
 
+-- parte de testes e simulações
 
+-- inserir produtos
+insert into tbl_produto (codigo, nome, categoria, preco, estoque, fornecedor) values
+(101, 'notebook dell inspiron', 'eletrônicos', 3500.00, 10, 'dell'),
+(102, 'smartphone samsung galaxy s22', 'eletrônicos', 4200.00, 15, 'samsung'),
+(103, 'geladeira brastemp frost free', 'eletrodomésticos', 3200.00, 8, 'brastemp'),
+(104, 'cadeira gamer xtreme', 'móveis', 850.00, 20, 'xtreme comfort'),
+(105, 'arroz branco tipo 1', 'alimentos', 25.00, 50, 'camil'),
+(106, 'feijão preto', 'alimentos', 12.00, 40, 'kikaldo'),
+(107, 'óleo de soja', 'alimentos', 9.00, 60, 'soya'),
+(108, 'leite integral 1l', 'laticínios', 6.00, 80, 'italac');
 
-/************************************************************************************************************************
-**************************************************************************************************************************
-**************************PARTE DE TESTES E SIMULAÇOES******************************************************************/
+-- inserir colaboradores
+insert into tbl_colaborador (nome, cpf, setor) values
+('carlos silva', '12345678900', 'vendas'),
+('fernanda souza', '98765432100', 'administração');
 
--- Inserir produtos
-INSERT INTO tbl_produto (codigo, nome, categoria, preco, estoque, fornecedor) VALUES
-(101, 'Notebook Dell Inspiron', 'Eletrônicos', 3500.00, 10, 'Dell'),
-(102, 'Smartphone Samsung Galaxy S22', 'Eletrônicos', 4200.00, 15, 'Samsung'),
-(103, 'Geladeira Brastemp Frost Free', 'Eletrodomésticos', 3200.00, 8, 'Brastemp'),
-(104, 'Cadeira Gamer Xtreme', 'Móveis', 850.00, 20, 'Xtreme Comfort'),
-(105, 'Arroz Branco Tipo 1', 'Alimentos', 25.00, 50, 'Camil'),
-(106, 'Feijão Preto', 'Alimentos', 12.00, 40, 'Kikaldo'),
-(107, 'Óleo de Soja', 'Alimentos', 9.00, 60, 'Soya'),
-(108, 'Leite Integral 1L', 'Laticínios', 6.00, 80, 'Italac');
+-- inserir clientes
+insert into tbl_cliente (nome, cpf, historico) values
+('joão pereira', '11122233344', 'cliente frequente, já realizou 5 compras.'),
+('maria oliveira', '55566677788', 'primeira compra no sistema.');
 
--- Inserir colaboradores
-INSERT INTO tbl_colaborador (nome, cpf, setor) VALUES
-('Carlos Silva', '12345678900', 'Vendas'),
-('Fernanda Souza', '98765432100', 'Administração');
+select * from tbl_produto;
+select * from tbl_colaborador;
+select * from tbl_cliente;
 
--- Inserir clientes
-INSERT INTO tbl_cliente (nome, cpf, historico) VALUES
-('João Pereira', '11122233344', 'Cliente frequente, já realizou 5 compras.'),
-('Maria Oliveira', '55566677788', 'Primeira compra no sistema.');
+-- cliente comprando
+insert into tbl_venda (data_compra, hora, forma_pagamento, id_cliente, id_colaborador) 
+values ('2025-06-02', now(), 'pix', 2, 2);
 
-SELECT * FROM tbl_produto;
-SELECT * FROM tbl_colaborador;
-SELECT * FROM tbl_cliente;
+-- registrar compra do produto
+insert into tbl_compra_produto (quantidade, id_venda, id_produto) 
+values (5, 2, 8); -- cliente comprou 5 unidades do leite (id_produto = 8)
 
-
-#cliente comprando
-INSERT INTO tbl_venda (data_Compra, hora, forma_pagamento, id_cliente, id_colaborador) 
-VALUES ('2025-06-02', NOW(), 'Pix', 2, 2);
-
-#registrar compra do produto
-INSERT INTO tbl_compra_produto (quantidade, id_venda, id_produto) 
-VALUES (5, 2, 16); -- Cliente comprou 5 unidades do leite (id_produto = 16)
-
-#Verificar o estoque atualizado
-SELECT nome, estoque FROM tbl_produto WHERE id = 16;
-
+-- verificar o estoque atualizado
+select nome, estoque from tbl_produto where id = 8;
 /*******************************************************************************************************************************
 **********************************   Testes OK!!!  *****************************************************************************/
+
